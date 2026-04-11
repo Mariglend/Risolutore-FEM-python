@@ -15,7 +15,7 @@ Interfaccia grafica (GUI): Strumento visivo interattivo per la costruizione del 
 # Installazione
 Il progetto è pensato come un pacchetto python installabile
 1. clona la repository
-   git clone https://github.com/mariglend/fem-travi.git
+   git clone https://github.com/Mariglend/Risolutore-FEM-python.git
    cd fem-travi
 
 2. installa pacchetto
