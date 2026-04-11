@@ -1,0 +1,253 @@
+Metadata-Version: 2.4
+Name: fem-travi
+Version: 1.0.0
+Summary: Solver FEM per travi piane 2D (Euler-Bernoulli)
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24
+Provides-Extra: plot
+Requires-Dist: matplotlib>=3.7; extra == "plot"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: matplotlib>=3.7; extra == "dev"
+
+# fem-travi 🏗️
+
+Solver **FEM** (Finite Element Method) per **travi piane 2D** scritto in Python puro.
+
+Basato sul metodo della rigidezza diretta con elementi Euler-Bernoulli.  
+Supporta strutture multi-trave, travi inclinate di qualsiasi angolo, carichi triangolari, diagrammi M/V/N e visualizzazione della deformata.
+
+---
+
+## Funzionalità
+
+| Feature | Dettaglio |
+|---|---|
+| Travi | Elemento Euler-Bernoulli 2D, inclinazione libera θ |
+| GDL | 3 per nodo: `ux`, `uy`, `φ` |
+| Vincoli | Incastro, cerniera, carrello, custom |
+| Carichi | Forza/momento nodale, uniforme, triangolare sx/dx |
+| Matrice K | Assemblaggio globale n×n, rotazione `Tᵀ K_loc T` |
+| Solver | `numpy.linalg.solve` (LU con pivot) |
+| Output | Reazioni, spostamenti, verifica equilibrio, M/V/N |
+| Grafici | Struttura, deformata amplificata, diagrammi interni |
+
+---
+
+## Installazione
+
+```bash
+# Clona il repo
+git clone https://github.com/yourusername/fem-travi.git
+cd fem-travi
+
+# Solo solver (numpy)
+pip install -e .
+
+# Con grafici (matplotlib)
+pip install -e ".[plot]"
+
+# Dev completo (pytest + matplotlib)
+pip install -e ".[dev]"
+```
+
+---
+
+## Quick start
+
+```python
+from fem_travi import Struttura, Nodo, Trave, Vincolo, Carico
+
+# Trave appoggiata L=6m, carico uniforme q=10 kN/m
+s = Struttura()
+s.aggiungi_nodo(Nodo(0, 0))          # N1 — cerniera
+s.aggiungi_nodo(Nodo(6, 0))          # N2 — carrello
+
+s.aggiungi_trave(Trave(0, 1, EI=10_000, EA=100_000))
+
+s.aggiungi_vincolo(Vincolo(0, ux_fisso=True,  uy_fisso=True, phi_fisso=False))
+s.aggiungi_vincolo(Vincolo(1, ux_fisso=False, uy_fisso=True, phi_fisso=False))
+
+s.aggiungi_carico(Carico("uniforme", obj=0, val1=10.0))
+
+r = s.risolvi()
+r.stampa()
+```
+
+Output:
+```
+============================================================
+  RISULTATI FEM — TRAVI PIANE 2D
+============================================================
+  Nodi: 2   GDL totali: 6
+  GDL liberi: 4   GDL vincolati: 2
+  Grado di iperstaticità: 0
+
+── Spostamenti nodali ──────────────────────────
+  ux_N1        = +0.0000e+00  m
+  uy_N1        = +0.0000e+00  m
+  φ_N1         = -4.5000e-04  rad
+  ...
+
+── Reazioni vincolari ──────────────────────────
+  Ry_N1        = +30.0000  kN
+  Rx_N1        = +0.0000   kN
+  Ry_N2        = +30.0000  kN
+
+── Verifica equilibrio ─────────────────────────
+  ΣFx = +0.000000 kN
+  ΣFy = +0.000000 kN
+  OK ✓
+============================================================
+```
+
+---
+
+## Struttura del progetto
+
+```
+fem-travi/
+├── fem_travi/
+│   ├── __init__.py       # export pubblici
+│   ├── core.py           # dataclass: Nodo, Trave, Vincolo, Carico
+│   ├── assembler.py      # K locale, rotazione T, assemblaggio, F, BC, solve
+│   ├── solver.py         # classe Struttura + Risultato (API principale)
+│   └── plotter.py        # visualizzazione matplotlib
+├── examples/
+│   └── esempi.py         # 4 esempi pronti (trave appoggiata, sbalzo, telaio, triangolare)
+├── tests/
+│   └── test_fem.py       # test unitari e di integrazione con pytest
+├── pyproject.toml
+└── README.md
+```
+
+---
+
+## API di riferimento
+
+### `Nodo(x, y)`
+Nodo con coordinate globali in metri.
+
+### `Trave(nodo_i, nodo_j, EI, EA, theta=None)`
+Elemento trave. `theta` in radianti; se `None` viene calcolato automaticamente.
+
+| Parametro | Unità | Descrizione |
+|---|---|---|
+| `EI` | kN·m² | Rigidezza flessionale |
+| `EA` | kN | Rigidezza assiale |
+| `theta` | rad | Angolo asse locale (opzionale) |
+
+### `Vincolo(nodo, ux_fisso, uy_fisso, phi_fisso)`
+
+| Configurazione | ux | uy | φ |
+|---|---|---|---|
+| Incastro | `True` | `True` | `True` |
+| Cerniera | `True` | `True` | `False` |
+| Carrello | `False` | `True` | `False` |
+
+### `Carico(type, obj, val1, val2=0)`
+
+| `type` | `obj` | `val1` | Unità |
+|---|---|---|---|
+| `nodo_fy` | indice nodo | forza (↓+) | kN |
+| `nodo_fx` | indice nodo | forza (→+) | kN |
+| `nodo_m`  | indice nodo | momento (↺+) | kN·m |
+| `uniforme` | indice trave | q | kN/m |
+| `triangolare_sx` | indice trave | q_max (a sinistra) | kN/m |
+| `triangolare_dx` | indice trave | q_max (a destra)  | kN/m |
+
+### `Risultato`
+
+```python
+r = s.risolvi()
+
+r.U                       # ndarray: spostamenti [m, m, rad]
+r.R                       # ndarray: reazioni [kN, kN, kN·m]
+r.K                       # ndarray: matrice K globale n×n
+r.reazioni_vincolari()    # dict: {label: (valore, unità)}
+r.spostamenti_nodali()    # dict: {label: (valore, unità)}
+r.verifica_equilibrio()   # dict: {'ΣFx', 'ΣFy', 'ok'}
+r.stampa()                # report completo a video
+r.matrice_K_str()         # stringa formattata della matrice K
+```
+
+---
+
+## Esempi
+
+```bash
+# Trave appoggiata + carico uniforme
+python examples/esempi.py --esempio 1
+
+# Trave a sbalzo con forze puntuali
+python examples/esempi.py --esempio 2
+
+# Telaio a L (colonna + trave)
+python examples/esempi.py --esempio 3
+
+# Trave continua + carico triangolare
+python examples/esempi.py --esempio 4
+
+# Tutti
+python examples/esempi.py --tutti
+
+# Solo output testo, senza grafici
+python examples/esempi.py --tutti --no-plot
+```
+
+---
+
+## Test
+
+```bash
+pytest tests/ -v
+```
+
+I test coprono:
+- Simmetria e semi-definitezza positiva delle matrici K
+- Ortogonalità della matrice di rotazione T
+- Verifica reazioni con soluzioni analitiche note (trave appoggiata, sbalzo, triangolare)
+- Verifica spostamenti con formule di Euler-Bernoulli
+- Validazione input (nodi coincidenti, struttura labile, parametri negativi)
+
+---
+
+## Teoria
+
+### Elemento Euler-Bernoulli
+
+GDL locali: `[u_i, v_i, φ_i, u_j, v_j, φ_j]`
+
+Matrice di rigidezza locale:
+
+```
+       | EA/L    0        0      -EA/L   0        0     |
+       |  0    12EI/L³  6EI/L²   0    -12EI/L³  6EI/L² |
+K_loc =|  0    6EI/L²   4EI/L   0    -6EI/L²   2EI/L  |
+       | -EA/L   0        0      EA/L    0        0     |
+       |  0   -12EI/L³ -6EI/L²  0     12EI/L³  -6EI/L² |
+       |  0    6EI/L²   2EI/L   0    -6EI/L²   4EI/L  |
+```
+
+### Rotazione
+
+```
+K_glob = Tᵀ · K_loc · T
+```
+
+con T matrice 6×6 contenente `cos θ` e `sin θ`.
+
+### Forze nodali equivalenti
+
+Carichi distribuiti convertiti con funzioni di forma di Hermite:
+
+- Uniforme `q`:  `f = [qL/2, qL²/12, qL/2, -qL²/12]`
+- Triangolare sx: `f = [7qL/20, qL²/20, 3qL/20, -qL²/30]`
+- Triangolare dx: `f = [3qL/20, qL²/30, 7qL/20, -qL²/20]`
+
+---
+
+## Licenza
+
+MIT — vedi [LICENSE](LICENSE).

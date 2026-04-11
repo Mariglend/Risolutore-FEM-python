@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+fem_travi/__init__.py
+fem_travi/assembler.py
+fem_travi/core.py
+fem_travi/plotter.py
+fem_travi/solver.py
+fem_travi.egg-info/PKG-INFO
+fem_travi.egg-info/SOURCES.txt
+fem_travi.egg-info/dependency_links.txt
+fem_travi.egg-info/requires.txt
+fem_travi.egg-info/top_level.txt
+tests/test_fem.py

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fem-travi"
+version = "1.0.0"
+description = "Solver FEM per travi piane 2D (Euler-Bernoulli)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+dev  = ["pytest>=7.0", "matplotlib>=3.7"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fem_travi*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v --tb=short"

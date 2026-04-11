@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solver FEM Travi 2D</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f3;color:#2c2c2a;font-size:14px}
+.app{display:grid;grid-template-columns:340px 1fr;height:100vh;overflow:hidden}
+.sidebar{background:#fff;border-right:1px solid #e0ddd5;overflow-y:auto;display:flex;flex-direction:column}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:14px 16px;border-bottom:1px solid #e0ddd5;font-size:15px;font-weight:500}
+.section{border-bottom:1px solid #e0ddd5;padding:12px 16px}
+.section-title{font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.form-row{display:grid;gap:8px;margin-bottom:8px}
+.form-row.cols2{grid-template-columns:1fr 1fr}
+.form-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-row.cols4{grid-template-columns:1fr 1fr 1fr 1fr}
+label{font-size:11px;color:#888;display:block;margin-bottom:2px}
+input,select{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#fff;color:#2c2c2a}
+input:focus,select:focus{outline:none;border-color:#378ADD}
+button{padding:6px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#2c2c2a;font-size:12px;cursor:pointer;font-weight:500}
+button:hover{background:#f5f5f3}
+button.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+button.primary:hover{background:#0C447C}
+button.success{background:#3B6D11;color:#fff;border-color:#3B6D11}
+button.success:hover{background:#27500A}
+button.danger-sm{background:none;border:none;color:#A32D2D;cursor:pointer;font-size:11px;padding:2px 6px}
+button.danger-sm:hover{background:#FCEBEB;border-radius:4px}
+.item{background:#f9f9f7;border:1px solid #e8e5de;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start}
+.item-info{font-size:12px;line-height:1.6}
+.item-name{font-weight:500;font-size:13px}
+.tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;font-weight:500;margin-right:4px}
+.tag-nodo{background:#E6F1FB;color:#0C447C}
+.tag-trave{background:#EEEDFE;color:#3C3489}
+.tag-vincolo{background:#EAF3DE;color:#27500A}
+.tag-carico{background:#FAECE7;color:#712B13}
+.tag-triangolare{background:#FAEEDA;color:#633806}
+.tag-momento{background:#FBEAF0;color:#72243E}
+canvas{display:block}
+.canvas-wrap{flex:1;position:relative;background:#fafaf8}
+.toolbar{background:#fff;border-bottom:1px solid #e0ddd5;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.results-panel{background:#fff;border-top:1px solid #e0ddd5;max-height:220px;overflow-y:auto;padding:12px 16px}
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px}
+.res-card{background:#f5f5f3;border-radius:6px;padding:8px 12px}
+.res-label{font-size:11px;color:#888}
+.res-val{font-size:18px;font-weight:500}
+.res-pos{color:#3B6D11}.res-neg{color:#A32D2D}
+.matrix-wrap{overflow-x:auto;margin-top:8px}
+table.matrix{border-collapse:collapse;font-size:11px;font-family:monospace}
+table.matrix td{padding:3px 8px;border:1px solid #e0ddd5;text-align:right;min-width:70px}
+table.matrix th{padding:3px 8px;background:#f5f5f3;border:1px solid #e0ddd5;text-align:center;font-weight:500}
+.alert{padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:8px}
+.alert-err{background:#FCEBEB;color:#A32D2D}
+.alert-ok{background:#EAF3DE;color:#27500A}
+.tab-bar{display:flex;gap:4px;margin-bottom:10px}
+.tab{padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;border:1px solid #ddd;background:#fff}
+.tab.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.steps{font-size:12px;line-height:2;color:#444}
+.tooltip{position:absolute;background:#2c2c2a;color:#fff;font-size:11px;padding:4px 8px;border-radius:5px;pointer-events:none;display:none;z-index:10;white-space:nowrap}
+.mode-btn{padding:5px 10px;border-radius:5px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:12px}
+.mode-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="sidebar">
+  <div class="sidebar-header">Solver FEM Travi 2D</div>
+
+  <div class="section">
+    <div class="section-title">1. Nodi
+      <button onclick="addNodo()" style="font-size:11px;padding:3px 8px">+ Aggiungi</button>
+    </div>
+    <div class="form-row cols2">
+      <div><label>x (m)</label><input type="number" id="nx" value="0" step="0.5"></div>
+      <div><label>y (m)</label><input type="number" id="ny" value="0" step="0.5"></div>
+    </div>
+    <div id="nodi-list"><p style="font-size:12px;color:#aaa">Nessun nodo.</p></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. Travi
+      <button onclick="addTrave()" style="font-size:11px;padding:3px 8px">+ Aggiungi</button>
+    </div>
+    <div class="form-row cols3">
+      <div><label>Nodo i</label><select id="ti"></select></div>
+      <div><label>Nodo j</label><select id="tj"></select></div>
+      <div><label>EI (kNm²)</label><input type="number" id="tEI" value="10000" step="1000"></div>
+    </div>
+    <div class="form-row cols2">
+      <div><label>EA (kN)</label><input type="number" id="tEA" value="100000" step="10000"></div>
+      <div><label>Angolo θ (°) — opzionale</label><input type="number" id="ttheta" value="" placeholder="auto" step="5"></div>
+    </div>
+    <div id="travi-list"><p style="font-size:12px;color:#aaa">Nessuna trave.</p></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. Vincoli</div>
+    <div class="form-row cols4">
+      <div><label>Nodo</label><select id="vnodo"></select></div>
+      <div><label>ux</label><select id="vux"><option value="free">lib</option><option value="fix" selected>fix</option></select></div>
+      <div><label>uy</label><select id="vuy"><option value="free">lib</option><option value="fix" selected>fix</option></select></div>
+      <div><label>φ</label><select id="vphi"><option value="free">lib</option><option value="fix" selected>fix</option></select></div>
+    </div>
+    <button onclick="addVincolo()" style="width:100%;margin-bottom:8px">+ Aggiungi vincolo</button>
+    <div id="vincoli-list"><p style="font-size:12px;color:#aaa">Nessun vincolo.</p></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">4. Carichi</div>
+    <div class="form-row cols2">
+      <div><label>Tipo</label>
+        <select id="ctype" onchange="updateCaricoCampi()">
+          <option value="nodo_fy">Forza nodale Fy</option>
+          <option value="nodo_fx">Forza nodale Fx</option>
+          <option value="nodo_m">Momento nodale</option>
+          <option value="uniforme">Distribuito uniforme</option>
+          <option value="triangolare_sx">Triangolare (max a sx)</option>
+          <option value="triangolare_dx">Triangolare (max a dx)</option>
+        </select>
+      </div>
+      <div id="campo-nodo-trave"><label id="lbl-nt">Nodo/Trave</label><select id="cobj"></select></div>
+    </div>
+    <div class="form-row cols2">
+      <div><label id="lbl-val1">Valore (kN o kNm)</label><input type="number" id="cval1" value="10" step="0.5"></div>
+      <div id="campo-val2" style="display:none"><label id="lbl-val2">Valore fine q₂ (kN/m)</label><input type="number" id="cval2" value="0" step="0.5"></div>
+    </div>
+    <button onclick="addCarico()" style="width:100%;margin-bottom:8px">+ Aggiungi carico</button>
+    <div id="carichi-list"><p style="font-size:12px;color:#aaa">Nessun carico.</p></div>
+  </div>
+
+  <div class="section" style="padding-bottom:16px">
+    <button class="success" style="width:100%;padding:10px;font-size:14px" onclick="solve()">Calcola reazioni (FEM)</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar">
+    <span style="font-size:12px;color:#888;font-weight:500">Vista:</span>
+    <button class="mode-btn active" id="btn-pan" onclick="setMode('pan')">Naviga</button>
+    <span style="font-size:11px;color:#ccc">|</span>
+    <button class="mode-btn" onclick="resetView()">Reset vista</button>
+    <button onclick="toggleGrid()" id="btn-grid" style="font-size:12px">Griglia ON</button>
+    <span style="flex:1"></span>
+    <span id="status-bar" style="font-size:12px;color:#888"></span>
+  </div>
+
+  <div class="canvas-wrap" id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <div class="results-panel" id="results-panel" style="display:none">
+    <div class="tab-bar">
+      <div class="tab active" onclick="showTab('reazioni')">Reazioni</div>
+      <div class="tab" onclick="showTab('matrix')">Matrice K</div>
+      <div class="tab" onclick="showTab('steps')">Passaggi</div>
+    </div>
+    <div id="tab-reazioni"></div>
+    <div id="tab-matrix" style="display:none"></div>
+    <div id="tab-steps" style="display:none"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+let nodi=[], travi=[], vincoli=[], carichi=[];
+let lastSol=null;
+
+// canvas & view
+let cam={x:0,y:0,scale:60};
+let showGrid=true;
+let mode='pan';
+let dragging=false, dragStart={x:0,y:0}, camStart={x:0,y:0};
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('canvas-wrap');
+
+function resize(){
+  canvas.width=wrap.clientWidth;
+  canvas.height=wrap.clientHeight;
+  draw();
+}
+
+function worldToScreen(wx,wy){
+  return {x: cam.x + wx*cam.scale, y: cam.y - wy*cam.scale};
+}
+function screenToWorld(sx,sy){
+  return {x:(sx-cam.x)/cam.scale, y:-(sy-cam.y)/cam.scale};
+}
+
+canvas.addEventListener('mousedown',e=>{
+  if(mode==='pan'){dragging=true;dragStart={x:e.clientX,y:e.clientY};camStart={x:cam.x,y:cam.y};}
+});
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  if(dragging&&mode==='pan'){cam.x=camStart.x+(e.clientX-dragStart.x);cam.y=camStart.y+(e.clientY-dragStart.y);draw();}
+  updateTooltip(mx,my);
+});
+canvas.addEventListener('mouseup',()=>{dragging=false;});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const wBefore=screenToWorld(mx,my);
+  cam.scale*=e.deltaY<0?1.12:0.89;
+  cam.scale=Math.max(10,Math.min(300,cam.scale));
+  const wAfter=screenToWorld(mx,my);
+  cam.x+=(wAfter.x-wBefore.x)*cam.scale;
+  cam.y-=(wAfter.y-wBefore.y)*cam.scale;
+  draw();
+},{passive:false});
+
+function setMode(m){mode=m;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));document.getElementById('btn-'+m).classList.add('active');}
+function toggleGrid(){showGrid=!showGrid;document.getElementById('btn-grid').textContent='Griglia '+(showGrid?'ON':'OFF');draw();}
+function resetView(){
+  if(nodi.length===0){cam={x:canvas.width/2,y:canvas.height/2,scale:60};draw();return;}
+  const xs=nodi.map(n=>n.x), ys=nodi.map(n=>n.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const padX=(maxX-minX)||4, padY=(maxY-minY)||4;
+  const scX=canvas.width/(padX*2.5), scY=canvas.height/(padY*2.5);
+  cam.scale=Math.max(20,Math.min(150,Math.min(scX,scY)));
+  cam.x=canvas.width/2-((minX+maxX)/2)*cam.scale;
+  cam.y=canvas.height/2+((minY+maxY)/2)*cam.scale;
+  draw();
+}
+
+function updateTooltip(mx,my){
+  const w=screenToWorld(mx,my);
+  const tt=document.getElementById('tooltip');
+  let found=null;
+  nodi.forEach((n,i)=>{
+    const s=worldToScreen(n.x,n.y);
+    if(Math.hypot(mx-s.x,my-s.y)<10) found=`Nodo ${i+1} (${n.x.toFixed(2)}, ${n.y.toFixed(2)})`;
+  });
+  travi.forEach((t,i)=>{
+    if(found) return;
+    const ni=nodi[t.i], nj=nodi[t.j];
+    if(!ni||!nj) return;
+    const mx2=(ni.x+nj.x)/2, my2=(ni.y+nj.y)/2;
+    const s=worldToScreen(mx2,my2);
+    if(Math.hypot(mx-s.x,my-s.y)<14) found=`Trave ${i+1}: L=${t.L.toFixed(3)}m, θ=${(t.theta*180/Math.PI).toFixed(1)}°`;
+  });
+  if(found){tt.style.display='block';tt.style.left=(mx+12)+'px';tt.style.top=(my-4)+'px';tt.textContent=found;}
+  else tt.style.display='none';
+  document.getElementById('status-bar').textContent=`x=${w.x.toFixed(2)} m  y=${w.y.toFixed(2)} m`;
+}
+
+function draw(){
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+
+  if(showGrid){
+    const step=pickGridStep();
+    const tl=screenToWorld(0,0), br=screenToWorld(W,H);
+    const x0=Math.floor(Math.min(tl.x,br.x)/step)*step;
+    const x1=Math.ceil(Math.max(tl.x,br.x)/step)*step;
+    const y0=Math.floor(Math.min(tl.y,br.y)/step)*step;
+    const y1=Math.ceil(Math.max(tl.y,br.y)/step)*step;
+    ctx.strokeStyle='#e8e5de';ctx.lineWidth=0.5;
+    for(let gx=x0;gx<=x1;gx+=step){const s=worldToScreen(gx,0);ctx.beginPath();ctx.moveTo(s.x,0);ctx.lineTo(s.x,H);ctx.stroke();}
+    for(let gy=y0;gy<=y1;gy+=step){const s=worldToScreen(0,gy);ctx.beginPath();ctx.moveTo(0,s.y);ctx.lineTo(W,s.y);ctx.stroke();}
+    ctx.strokeStyle='#ccc';ctx.lineWidth=1;
+    const ox=worldToScreen(0,0);
+    ctx.beginPath();ctx.moveTo(ox.x,0);ctx.lineTo(ox.x,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,ox.y);ctx.lineTo(W,ox.y);ctx.stroke();
+    ctx.fillStyle='#bbb';ctx.font='10px monospace';ctx.textAlign='center';
+    for(let gx=x0;gx<=x1;gx+=step){const s=worldToScreen(gx,0);if(gx!==0)ctx.fillText(gx,s.x,ox.y+12);}
+    ctx.textAlign='right';
+    for(let gy=y0;gy<=y1;gy+=step){const s=worldToScreen(0,gy);if(gy!==0)ctx.fillText(gy,ox.x-4,s.y+3);}
+  }
+
+  travi.forEach((t,i)=>{
+    const ni=nodi[t.i], nj=nodi[t.j];
+    if(!ni||!nj) return;
+    const si=worldToScreen(ni.x,ni.y), sj=worldToScreen(nj.x,nj.y);
+    ctx.strokeStyle='#534AB7';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(si.x,si.y);ctx.lineTo(sj.x,sj.y);ctx.stroke();
+    const mx=(si.x+sj.x)/2, my=(si.y+sj.y)/2;
+    ctx.fillStyle='#534AB7';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+    ctx.fillText('T'+(i+1),mx,my-7);
+  });
+
+  carichi.forEach(c=>{
+    if(c.type.startsWith('nodo')){
+      const n=nodi[c.obj];if(!n) return;
+      const s=worldToScreen(n.x,n.y);
+      drawArrow(ctx,s.x,s.y,c.type==='nodo_fx'?-1:0,c.type==='nodo_fy'?-1:0,c.val1,'#D85A30');
+    } else {
+      const t=travi[c.obj];if(!t) return;
+      const ni=nodi[t.i],nj=nodi[t.j];if(!ni||!nj) return;
+      drawDistributed(ctx,ni,nj,c,t.theta);
+    }
+  });
+
+  vincoli.forEach(v=>{
+    const n=nodi[v.nodo];if(!n) return;
+    const s=worldToScreen(n.x,n.y);
+    drawVincolo(ctx,s,v);
+  });
+
+  nodi.forEach((n,i)=>{
+    const s=worldToScreen(n.x,n.y);
+    ctx.fillStyle='#fff';ctx.strokeStyle='#185FA5';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(s.x,s.y,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#185FA5';ctx.font='bold 11px sans-serif';ctx.textAlign='left';
+    ctx.fillText('N'+(i+1),s.x+8,s.y-5);
+  });
+
+  if(lastSol) drawDeformed();
+}
+
+function pickGridStep(){
+  const mPerPx=1/cam.scale;
+  const raw=mPerPx*80;
+  const exp=Math.pow(10,Math.floor(Math.log10(raw)));
+  const norm=raw/exp;
+  if(norm<2) return exp;
+  if(norm<5) return 2*exp;
+  return 5*exp;
+}
+
+function drawArrow(ctx,x,y,dx,dy,val,col){
+  const len=30, hw=6;
+  const ax=x+dx*len, ay=y+dy*len;
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ax,ay);ctx.stroke();
+  const angle=Math.atan2(y-ay,x-ax);
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x+Math.cos(angle+0.4)*hw,y+Math.sin(angle+0.4)*hw);
+  ctx.lineTo(x+Math.cos(angle-0.4)*hw,y+Math.sin(angle-0.4)*hw);
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle=col;ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.abs(val).toFixed(1)+'kN',ax,ay-6);
+}
+
+function drawDistributed(ctx,ni,nj,c,theta){
+  const si=worldToScreen(ni.x,ni.y), sj=worldToScreen(nj.x,nj.y);
+  const dx=sj.x-si.x, dy=sj.y-si.y;
+  const L=Math.hypot(dx,dy);
+  const nx=-dy/L, ny=dx/L;
+  const steps=8;
+  const q1=c.val1, q2=(c.type==='triangolare_sx')?0:(c.type==='triangolare_dx')?0:c.val2||c.val1;
+  const qstart=(c.type==='triangolare_dx')?0:q1;
+  const qend=(c.type==='triangolare_sx')?0:q1;
+  ctx.strokeStyle='#BA7517';ctx.lineWidth=1.5;
+  const scale=0.6;
+  ctx.beginPath();
+  for(let k=0;k<=steps;k++){
+    const t=k/steps;
+    const qk=qstart*(1-t)+qend*t;
+    const bx=si.x+t*dx, by=si.y+t*dy;
+    const tx=bx+nx*qk*scale, ty=by+ny*qk*scale;
+    if(k===0) ctx.moveTo(tx,ty); else ctx.lineTo(tx,ty);
+  }
+  ctx.stroke();
+  for(let k=0;k<=steps;k++){
+    const t=k/steps;
+    const qk=qstart*(1-t)+qend*t;
+    if(Math.abs(qk)<0.01) continue;
+    const bx=si.x+t*dx, by=si.y+t*dy;
+    const tx=bx+nx*qk*scale, ty=by+ny*qk*scale;
+    ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(bx,by);ctx.stroke();
+    ctx.fillStyle='#BA7517';
+    const ang=Math.atan2(by-ty,bx-tx);
+    ctx.beginPath();ctx.moveTo(bx,by);
+    ctx.lineTo(bx+Math.cos(ang+0.4)*5,by+Math.sin(ang+0.4)*5);
+    ctx.lineTo(bx+Math.cos(ang-0.4)*5,by+Math.sin(ang-0.4)*5);
+    ctx.closePath();ctx.fill();
+  }
+  const mx=(si.x+sj.x)/2, my2=(si.y+sj.y)/2;
+  ctx.fillStyle='#BA7517';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText(q1.toFixed(1)+'kN/m',mx+nx*20,my2+ny*20);
+}
+
+function drawVincolo(ctx,s,v){
+  const sz=12;
+  ctx.strokeStyle='#3B6D11';ctx.lineWidth=1.5;ctx.fillStyle='#EAF3DE';
+  if(!v.ux&&!v.uy&&!v.phi){
+    ctx.beginPath();ctx.moveTo(s.x,s.y+2);ctx.lineTo(s.x-sz,s.y+sz+2);ctx.lineTo(s.x+sz,s.y+sz+2);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(s.x+k*sz*0.6,s.y+sz+2);ctx.lineTo(s.x+k*sz*0.6-4,s.y+sz+8);ctx.stroke();}
+  } else if(!v.ux&&!v.uy&&v.phi){
+    ctx.beginPath();ctx.moveTo(s.x,s.y+2);ctx.lineTo(s.x-sz,s.y+sz+2);ctx.lineTo(s.x+sz,s.y+sz+2);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(s.x,s.y,4,0,Math.PI*2);ctx.fillStyle='#3B6D11';ctx.fill();
+  } else if(v.ux&&!v.uy&&v.phi){
+    ctx.fillRect(s.x-sz,s.y-sz/2,2,sz);
+    ctx.beginPath();ctx.moveTo(s.x,s.y+2);ctx.lineTo(s.x-sz,s.y+sz+2);ctx.lineTo(s.x+sz,s.y+sz+2);ctx.closePath();
+    ctx.fill();ctx.stroke();
+  } else {
+    ctx.fillStyle='#3B6D11';
+    ctx.fillRect(s.x-sz,s.y-sz,sz*2,sz*2);
+    ctx.fillStyle='#EAF3DE';ctx.fillRect(s.x-sz+2,s.y-sz+2,sz*2-4,sz*2-4);
+  }
+  let labels=[];
+  if(!v.ux) labels.push('ux');
+  if(!v.uy) labels.push('uy');
+  if(!v.phi) labels.push('φ');
+  ctx.fillStyle='#3B6D11';ctx.font='9px sans-serif';ctx.textAlign='center';
+  ctx.fillText(labels.join(','),s.x,s.y+sz+16);
+}
+
+function drawDeformed(){
+  if(!lastSol||!lastSol.U) return;
+  const U=lastSol.U;
+  const absVals=U.map(Math.abs).filter(v=>isFinite(v)&&v>0);
+  if(absVals.length===0) return;
+  const maxU=Math.max(...absVals);
+  const ampScale=(cam.scale*1.5)/Math.max(maxU*cam.scale,1);
+  travi.forEach(t=>{
+    const ni=nodi[t.i],nj=nodi[t.j];if(!ni||!nj) return;
+    const dofs=[t.i*3,t.i*3+1,t.i*3+2,t.j*3,t.j*3+1,t.j*3+2];
+    const u=dofs.map(d=>(U[d]||0)*ampScale);
+    const cs=Math.cos(t.theta),sn=Math.sin(t.theta);
+    const steps=24;
+    ctx.strokeStyle='rgba(216,90,48,0.55)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    for(let k=0;k<=steps;k++){
+      const xi=k/steps;
+      const N1=1-3*xi*xi+2*xi*xi*xi;
+      const N2=xi*(1-xi)*(1-xi)*t.L;
+      const N3=3*xi*xi-2*xi*xi*xi;
+      const N4=xi*xi*(xi-1)*t.L;
+      const ul_i= cs*u[0]+sn*u[1];
+      const vl_i=-sn*u[0]+cs*u[1];
+      const phi_i=u[2];
+      const ul_j= cs*u[3]+sn*u[4];
+      const vl_j=-sn*u[3]+cs*u[4];
+      const phi_j=u[5];
+      const ul=ul_i*(1-xi)+ul_j*xi;
+      const vl=N1*vl_i+N2*phi_i+N3*vl_j+N4*phi_j;
+      const xg=ni.x+(nj.x-ni.x)*xi+cs*ul-sn*vl;
+      const yg=ni.y+(nj.y-ni.y)*xi+sn*ul+cs*vl;
+      const sp=worldToScreen(xg,yg);
+      if(k===0) ctx.moveTo(sp.x,sp.y); else ctx.lineTo(sp.x,sp.y);
+    }
+    ctx.stroke();ctx.setLineDash([]);
+  });
+}
+
+function updateSelects(){
+  ['ti','tj','vnodo','cobj'].forEach(id=>{
+    const el=document.getElementById(id);
+    const old=el.value;
+    if(id==='cobj'){updateCaricoCampi();return;}
+    el.innerHTML=nodi.map((n,i)=>`<option value="${i}">N${i+1} (${n.x},${n.y})</option>`).join('');
+    if(old<nodi.length) el.value=old;
+  });
+  updateCaricoCampi();
+}
+
+function updateCaricoCampi(){
+  const t=document.getElementById('ctype').value;
+  const isNodal=t.startsWith('nodo');
+  const lbl=document.getElementById('lbl-nt');
+  lbl.textContent=isNodal?'Nodo':'Trave';
+  const el=document.getElementById('cobj');
+  if(isNodal){
+    el.innerHTML=nodi.map((n,i)=>`<option value="${i}">N${i+1}</option>`).join('');
+  } else {
+    el.innerHTML=travi.map((tr,i)=>`<option value="${i}">T${i+1}</option>`).join('');
+  }
+  document.getElementById('campo-val2').style.display=(t==='uniforme')?'block':'none';
+  document.getElementById('lbl-val1').textContent=t==='nodo_m'?'Momento (kNm)':'Valore q₁ (kN/m o kN)';
+}
+
+function addNodo(){
+  const x=parseFloat(document.getElementById('nx').value);
+  const y=parseFloat(document.getElementById('ny').value);
+  if(isNaN(x)||isNaN(y)){alert('Coordinate non valide');return;}
+  nodi.push({x,y});
+  updateSelects();
+  renderNodi();
+  if(nodi.length===1) resetView();
+  draw();
+}
+
+function addTrave(){
+  const i=parseInt(document.getElementById('ti').value);
+  const j=parseInt(document.getElementById('tj').value);
+  if(i===j){alert('I nodi devono essere diversi!');return;}
+  const EI=parseFloat(document.getElementById('tEI').value);
+  const EA=parseFloat(document.getElementById('tEA').value);
+  const thetaInput=document.getElementById('ttheta').value;
+  const ni=nodi[i],nj=nodi[j];
+  const dx=nj.x-ni.x, dy=nj.y-ni.y;
+  const L=Math.hypot(dx,dy);
+  if(L<1e-9){alert('I nodi coincidono!');return;}
+  const theta=thetaInput===''?Math.atan2(dy,dx):parseFloat(thetaInput)*Math.PI/180;
+  travi.push({i,j,EI,EA,L,theta});
+  updateCaricoCampi();
+  renderTravi();
+  draw();
+}
+
+function addVincolo(){
+  const nodo=parseInt(document.getElementById('vnodo').value);
+  if(isNaN(nodo)){alert('Seleziona un nodo');return;}
+  const ux=document.getElementById('vux').value==='free';
+  const uy=document.getElementById('vuy').value==='free';
+  const phi=document.getElementById('vphi').value==='free';
+  const existingIdx=vincoli.findIndex(v=>v.nodo===nodo);
+  if(existingIdx>=0) vincoli.splice(existingIdx,1);
+  vincoli.push({nodo,ux,uy,phi});
+  renderVincoli();
+  draw();
+}
+
+function addCarico(){
+  const type=document.getElementById('ctype').value;
+  const obj=parseInt(document.getElementById('cobj').value);
+  const val1=parseFloat(document.getElementById('cval1').value);
+  const val2=parseFloat(document.getElementById('cval2').value)||val1;
+  if(isNaN(val1)){alert('Valore non valido');return;}
+  carichi.push({type,obj,val1,val2});
+  renderCarichi();
+  draw();
+}
+
+function renderNodi(){
+  const el=document.getElementById('nodi-list');
+  if(nodi.length===0){el.innerHTML='<p style="font-size:12px;color:#aaa">Nessun nodo.</p>';return;}
+  el.innerHTML=nodi.map((n,i)=>`<div class="item"><div class="item-info"><span class="tag tag-nodo">N${i+1}</span> (${n.x.toFixed(2)}, ${n.y.toFixed(2)}) m</div><button class="danger-sm" onclick="removeNodo(${i})">✕</button></div>`).join('');
+}
+function renderTravi(){
+  const el=document.getElementById('travi-list');
+  if(travi.length===0){el.innerHTML='<p style="font-size:12px;color:#aaa">Nessuna trave.</p>';return;}
+  el.innerHTML=travi.map((t,i)=>`<div class="item"><div class="item-info"><span class="tag tag-trave">T${i+1}</span> N${t.i+1}→N${t.j+1} | L=${t.L.toFixed(2)}m θ=${(t.theta*180/Math.PI).toFixed(1)}° EI=${t.EI}</div><button class="danger-sm" onclick="removeTrave(${i})">✕</button></div>`).join('');
+}
+function renderVincoli(){
+  const el=document.getElementById('vincoli-list');
+  if(vincoli.length===0){el.innerHTML='<p style="font-size:12px;color:#aaa">Nessun vincolo.</p>';return;}
+  el.innerHTML=vincoli.map((v,i)=>{
+    const tipo=!v.ux&&!v.uy&&!v.phi?'incastro':!v.ux&&!v.uy&&v.phi?'cerniera':v.ux&&!v.uy&&v.phi?'carrello':'custom';
+    return `<div class="item"><div class="item-info"><span class="tag tag-vincolo">N${v.nodo+1}</span> ${tipo} | ux:${v.ux?'lib':'fix'} uy:${v.uy?'lib':'fix'} φ:${v.phi?'lib':'fix'}</div><button class="danger-sm" onclick="removeVincolo(${i})">✕</button></div>`;
+  }).join('');
+}
+function renderCarichi(){
+  const el=document.getElementById('carichi-list');
+  if(carichi.length===0){el.innerHTML='<p style="font-size:12px;color:#aaa">Nessun carico.</p>';return;}
+  el.innerHTML=carichi.map((c,i)=>{
+    const cls=c.type.includes('triangolare')?'triangolare':c.type==='nodo_m'?'momento':'carico';
+    const ref=c.type.startsWith('nodo')?`N${c.obj+1}`:`T${c.obj+1}`;
+    return `<div class="item"><div class="item-info"><span class="tag tag-${cls}">${c.type.replace(/_/g,' ')}</span> ${ref} | ${c.val1.toFixed(2)} kN${c.type==='uniforme'?' q₂='+c.val2.toFixed(2):''}</div><button class="danger-sm" onclick="removeCarico(${i})">✕</button></div>`;
+  }).join('');
+}
+function removeNodo(i){nodi.splice(i,1);travi=travi.filter(t=>t.i!==i&&t.j!==i);travi.forEach(t=>{if(t.i>i)t.i--;if(t.j>i)t.j--;});vincoli=vincoli.filter(v=>v.nodo!==i);vincoli.forEach(v=>{if(v.nodo>i)v.nodo--;});carichi=carichi.filter(c=>!c.type.startsWith('nodo')||c.obj!==i);updateSelects();renderNodi();renderTravi();renderVincoli();renderCarichi();draw();}
+function removeTrave(i){travi.splice(i,1);carichi=carichi.filter(c=>c.type.startsWith('nodo')||c.obj!==i);renderTravi();renderCarichi();draw();}
+function removeVincolo(i){vincoli.splice(i,1);renderVincoli();draw();}
+function removeCarico(i){carichi.splice(i,1);renderCarichi();draw();}
+
+// FEM solver
+function buildKlocal(el){
+  const {EI,EA,L}=el;
+  const K=Array.from({length:6},()=>new Array(6).fill(0));
+  const a=EA/L;
+  const b=12*EI/L**3, c=6*EI/L**2, d=4*EI/L, e=2*EI/L;
+  K[0][0]=a; K[0][3]=-a; K[3][0]=-a; K[3][3]=a;
+  K[1][1]=b; K[1][2]=c; K[1][4]=-b; K[1][5]=c;
+  K[2][1]=c; K[2][2]=d; K[2][4]=-c; K[2][5]=e;
+  K[4][1]=-b; K[4][2]=-c; K[4][4]=b; K[4][5]=-c;
+  K[5][1]=c; K[5][2]=e; K[5][4]=-c; K[5][5]=d;
+  return K;
+}
+
+function buildT(theta){
+  const c=Math.cos(theta), s=Math.sin(theta);
+  const T=Array.from({length:6},()=>new Array(6).fill(0));
+  T[0][0]=c; T[0][1]=s; T[1][0]=-s; T[1][1]=c; T[2][2]=1;
+  T[3][3]=c; T[3][4]=s; T[4][3]=-s; T[4][4]=c; T[5][5]=1;
+  return T;
+}
+
+function matMul(A,B){
+  const n=A.length, m=B[0].length, p=B.length;
+  return Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>A[i].reduce((s,_,k)=>s+A[i][k]*B[k][j],0)));
+}
+function matT(A){return A[0].map((_,i)=>A.map(r=>r[i]));}
+
+function buildKglobal(){
+  const n=nodi.length, ndof=n*3;
+  const K=Array.from({length:ndof},()=>new Array(ndof).fill(0));
+  travi.forEach(el=>{
+    const Kl=buildKlocal(el);
+    const T=buildT(el.theta);
+    const TT=matT(T);
+    const Kg=matMul(matMul(TT,Kl),T);
+    const dofs=[el.i*3,el.i*3+1,el.i*3+2,el.j*3,el.j*3+1,el.j*3+2];
+    for(let a=0;a<6;a++) for(let b2=0;b2<6;b2++) K[dofs[a]][dofs[b2]]+=Kg[a][b2];
+  });
+  return K;
+}
+
+function buildF(){
+  const ndof=nodi.length*3;
+  const F=new Array(ndof).fill(0);
+  carichi.forEach(c=>{
+    if(c.type==='nodo_fy'){F[c.obj*3+1]-=c.val1;}
+    else if(c.type==='nodo_fx'){F[c.obj*3]-=c.val1;}
+    else if(c.type==='nodo_m'){F[c.obj*3+2]-=c.val1;}
+    else {
+      const t=travi[c.obj]; if(!t) return;
+      const L=t.L;
+      let fne=new Array(6).fill(0);
+      if(c.type==='uniforme'){
+        const q=c.val1;
+        fne[1]=q*L/2; fne[2]=q*L*L/12; fne[4]=q*L/2; fne[5]=-q*L*L/12;
+      } else if(c.type==='triangolare_sx'){
+        const q=c.val1;
+        fne[1]=7*q*L/20; fne[2]=q*L*L/20; fne[4]=3*q*L/20; fne[5]=-q*L*L/30;
+      } else if(c.type==='triangolare_dx'){
+        const q=c.val1;
+        fne[1]=3*q*L/20; fne[2]=q*L*L/30; fne[4]=7*q*L/20; fne[5]=-q*L*L/20;
+      }
+      const T=buildT(t.theta);
+      const TT=matT(T);
+      const fg=TT.map(row=>row.reduce((s,v,k)=>s+v*fne[k],0));
+      const dofs=[t.i*3,t.i*3+1,t.i*3+2,t.j*3,t.j*3+1,t.j*3+2];
+      for(let a=0;a<6;a++) F[dofs[a]]+=fg[a];
+    }
+  });
+  return F;
+}
+
+function applyBC(Kfull,Ffull){
+  const ndof=Kfull.length;
+  const fixed=new Array(ndof).fill(false);
+  vincoli.forEach(v=>{
+    if(!v.ux) fixed[v.nodo*3]=true;
+    if(!v.uy) fixed[v.nodo*3+1]=true;
+    if(!v.phi) fixed[v.nodo*3+2]=true;
+  });
+  const free=[];
+  for(let i=0;i<ndof;i++) if(!fixed[i]) free.push(i);
+  const nf=free.length;
+  const Kff=Array.from({length:nf},(_,i)=>Array.from({length:nf},(_,j)=>Kfull[free[i]][free[j]]));
+  const Ff=free.map(i=>Ffull[i]);
+  return {Kff,Ff,free,fixed};
+}
+
+function gaussSolve(A,b){
+  const n=b.length;
+  if(n===0) return [];
+  const M=A.map((r,i)=>[...r,b[i]]);
+  for(let col=0;col<n;col++){
+    let pivot=col, mx=Math.abs(M[col][col]);
+    for(let row=col+1;row<n;row++) if(Math.abs(M[row][col])>mx){mx=Math.abs(M[row][col]);pivot=row;}
+    if(mx<1e-12) return null;
+    [M[col],M[pivot]]=[M[pivot],M[col]];
+    const div=M[col][col];
+    for(let k=col;k<=n;k++) M[col][k]/=div;
+    for(let row=0;row<n;row++){
+      if(row===col) continue;
+      const f=M[row][col];
+      for(let k=col;k<=n;k++) M[row][k]-=f*M[col][k];
+    }
+  }
+  return M.map(r=>r[n]);
+}
+
+function solve(){
+  if(nodi.length<2){showErr('Aggiungi almeno 2 nodi e 1 trave.');return;}
+  if(travi.length<1){showErr('Aggiungi almeno 1 trave.');return;}
+  if(vincoli.length<1){showErr('Aggiungi almeno un vincolo.');return;}
+
+  const K=buildKglobal();
+  const F=buildF();
+  const {Kff,Ff,free,fixed}=applyBC(K,F);
+
+  if(free.length===0){showErr('Struttura completamente vincolata: nessun gdl libero.');return;}
+
+  const Uf=gaussSolve(Kff,Ff);
+  if(!Uf){showErr('Sistema singolare: struttura labile o mal condizionata. Controlla i vincoli.');return;}
+
+  const ndof=K.length;
+  const U=new Array(ndof).fill(0);
+  free.forEach((gi,li)=>U[gi]=Uf[li]);
+
+  const R=K.map(row=>row.reduce((s,k,j)=>s+k*U[j],0)).map((r,i)=>r-F[i]);
+
+  lastSol={U,R,K};
+  showResults(U,R,K,F,free,fixed);
+  draw();
+}
+
+function showErr(msg){
+  document.getElementById('results-panel').style.display='block';
+  document.getElementById('tab-reazioni').innerHTML=`<div class="alert alert-err">${msg}</div>`;
+  document.getElementById('tab-matrix').innerHTML='';
+  document.getElementById('tab-steps').innerHTML='';
+  showTab('reazioni');
+}
+
+function showResults(U,R,K,F,free,fixed){
+  const panel=document.getElementById('results-panel');
+  panel.style.display='block';
+
+  let html='';
+  const hasFixed=vincoli.length>0;
+  if(hasFixed){
+    html+='<div class="results-grid">';
+    vincoli.forEach(v=>{
+      const labels=['Rx','Ry','Mz'];
+      const fixed2=[!v.ux,!v.uy,!v.phi];
+      fixed2.forEach((isFixed,k)=>{
+        if(!isFixed) return;
+        const gi=v.nodo*3+k;
+        const val=R[gi];
+        const unit=k===2?'kNm':'kN';
+        const cls=val>=0?'res-pos':'res-neg';
+        html+=`<div class="res-card"><div class="res-label">${labels[k]} @ N${v.nodo+1}</div><div class="res-val ${cls}">${val.toFixed(4)} ${unit}</div></div>`;
+      });
+    });
+    html+='</div>';
+    const sumFx=R.reduce((s,v,i)=>i%3===0?s+v:s,0)+F.reduce((s,v,i)=>i%3===0?s+v:s,0);
+    const sumFy=R.reduce((s,v,i)=>i%3===1?s+v:s,0)+F.reduce((s,v,i)=>i%3===1?s+v:s,0);
+    const ok=Math.abs(sumFx)<0.01&&Math.abs(sumFy)<0.01;
+    html+=`<div class="alert ${ok?'alert-ok':'alert-err'}">Verifica equilibrio: ΣFx=${sumFx.toFixed(4)} kN  ΣFy=${sumFy.toFixed(4)} kN  ${ok?'OK ✓':'ERRORE ✗'}</div>`;
+  }
+  document.getElementById('tab-reazioni').innerHTML=html;
+
+  const n=K.length;
+  const dofLabels=[];
+  nodi.forEach((_,i)=>{dofLabels.push(`ux${i+1}`,`uy${i+1}`,`φ${i+1}`);});
+  let mhtml='<div class="matrix-wrap"><p style="font-size:11px;color:#888;margin-bottom:6px">Matrice di rigidezza globale K ('+n+'×'+n+')</p><table class="matrix"><tr><th></th>'+dofLabels.map(l=>`<th>${l}</th>`).join('')+'</tr>';
+  K.forEach((row,i)=>{
+    mhtml+=`<tr><th>${dofLabels[i]}</th>`+row.map(v=>{
+      const fmt=Math.abs(v)>1e6?v.toExponential(2):v.toFixed(1);
+      const col=Math.abs(v)<1e-9?'color:#ccc':'';
+      return `<td style="${col}">${fmt}</td>`;
+    }).join('')+'</tr>';
+  });
+  mhtml+='</table></div>';
+  document.getElementById('tab-matrix').innerHTML=mhtml;
+
+  let steps='<div class="steps">';
+  steps+=`<b>GDL totali:</b> ${n} (${nodi.length} nodi × 3)<br>`;
+  steps+=`<b>GDL liberi:</b> ${free.length}  |  <b>GDL vincolati:</b> ${fixed.filter(Boolean).length}<br>`;
+  steps+=`<b>Gradi di iperstaticità:</b> ${fixed.filter(Boolean).length-3>=0?fixed.filter(Boolean).length-3:'—'}<br><br>`;
+  steps+=`<b>Vettore spostamenti nodali U:</b><br>`;
+  U.forEach((u,i)=>{
+    const nodo=Math.floor(i/3), comp=['ux','uy','φ'][i%3], unit=i%3===2?'rad':'m';
+    steps+=`&nbsp;&nbsp;${comp}${nodo+1} = ${u.toFixed(6)} ${unit}<br>`;
+  });
+  steps+=`<br><b>Procedura:</b><br>`;
+  steps+=`&nbsp;&nbsp;1. Matrici K_loc 6×6 per ogni trave (Euler-Bernoulli)<br>`;
+  steps+=`&nbsp;&nbsp;2. Rotazione: K_glob = Tᵀ K_loc T<br>`;
+  steps+=`&nbsp;&nbsp;3. Assemblaggio K globale ${n}×${n}<br>`;
+  steps+=`&nbsp;&nbsp;4. Carichi distribuiti → forze nodali equivalenti<br>`;
+  steps+=`&nbsp;&nbsp;5. Eliminazione GDL vincolati → sistema ridotto ${free.length}×${free.length}<br>`;
+  steps+=`&nbsp;&nbsp;6. Soluzione con eliminazione di Gauss con pivot parziale<br>`;
+  steps+=`&nbsp;&nbsp;7. Reazioni: R = K·U − F<br>`;
+  steps+='</div>';
+  document.getElementById('tab-steps').innerHTML=steps;
+  showTab('reazioni');
+}
+
+function showTab(name){
+  ['reazioni','matrix','steps'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===name?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',['reazioni','matrix','steps'][i]===name);
+  });
+}
+
+window.addEventListener('resize',resize);
+resize();
+cam={x:canvas.width/2,y:canvas.height*0.6,scale:60};
+draw();
+</script>
+</body>
+</html>
