@@ -12,6 +12,8 @@ Verifica: Calcolo delle reazioni vincolari e successivamente verifica dell'equil
 Interfaccia grafica (GUI): Strumento visivo interattivo per la costruizione del modello e la verifica
 
 
+
+
 # Installazione
 Il progetto è pensato come un pacchetto python installabile
 1. clona la repository
@@ -21,26 +23,43 @@ Il progetto è pensato come un pacchetto python installabile
 2. installa pacchetto
    pip install -e ".[dev]"
 
-# Utilizzo
+
+
+
+#Utilizzo
 Il progetto è pensato per essere utilizzato sia come libreria python che tramite l'interfaccia dedicata.
 Per avviare l'interfaccia da terminale eseguire:
 python gui_fem.py
 
 
-# Script rapido
+
+
+
+#Script rapido
 Per verifiche veloci
 from fem_travi import Struttura, Nodo, Trave
 
 s = Struttura()
-# Aggiunta nodi e travi...
 r = s.risolvi()
 r.stampa()
 
+
+
+
+
 # Validazione e Metodologia
 Il solver utilizza il metodo della rigidezza diretta. La validazione è stata fatta confrontando i risultati con soluzioni analitiche di prove d'esame che coprono:
-.Trave appoggiata a sbalzo
-.Telai e portali iperstatici
-. VErifica della simmetria e della deficinizia positiva della matrice K globale
+
+   
+  1.Trave appoggiata a sbalzo
+  
+  2.Telai e portali iperstatici
+  
+  3.VErifica della simmetria e della deficinizia positiva della matrice K globale
+
+
+
+
 
 
 OSS: Questo progetto è stato sviluppato per scopi didattici sebbene i risultati siano stati valididati si consiglia un controllo critico dei risultati.
