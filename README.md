@@ -8,7 +8,7 @@ Il progetto nasce dall'esigenza pratica di avere uno strumento di visualizzazion
 Modellazione fisica: trave eulero bernulli con 3 gdl per nodo (ux, uy,\phi$) 
 Carichi complessi: supporto per forze nodali, momenti e carichi distribuiti (uniformi e triangolari)
 Analisi iperstatica: Risoluzione del sistema globale tramite matrici di rigidezza ruotate e assemblate
-Verifica: Calcolo delle reazioni vincolari e successivamente verifica dell'equilibrio)
+Verifica usata: Calcolo delle reazioni vincolari e successivamente verifica dell'equilibrio)
 Interfaccia grafica (GUI): Strumento visivo interattivo per la costruizione del modello e la verifica
 
 
