@@ -1,4 +1,13 @@
 # Risolutore-FEM-python
+
+# UPDATE
+Con la versione v2 aggiunto
+Vincoli completi + svincoli interni
+Elementi Truss
+Database sezioni/materiali
+Analisi modale
+Carichi termici
+Finestra risultati avanzata
 Fem-travi è un risolutore bidimensionale basato sul metedo degli elementi finiti (FEM).
 
 Il progetto nasce dall'esigenza pratica di avere uno strumento di visualizzazione per la risoluzione di esercizi e prove d'esame di meccanica dei solidi. Lo strumento permette di verificare rapidamente spostamenti, reazioni vincolari e diagrammi delle sollecitazioni iperstatiche.
