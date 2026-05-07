@@ -38,7 +38,7 @@ Il progetto è pensato come un pacchetto python installabile
 #Utilizzo
 Il progetto è pensato per essere utilizzato sia come libreria python che tramite l'interfaccia dedicata.
 Per avviare l'interfaccia da terminale eseguire:
-python gui_fem.py
+python gui_fem_pro_v2.py
 
 
 
