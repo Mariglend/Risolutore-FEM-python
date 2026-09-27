@@ -1,0 +1,8 @@
+# Fine riga normalizzati per i file di testo
+* text=auto
+
+# File binari: nessuna conversione
+*.pdf binary
+*.png binary
+*.jpg binary
+*.bundle binary
