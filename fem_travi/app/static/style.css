@@ -131,6 +131,10 @@ dialog li { margin-bottom: 6px; }
 .dg.M { stroke: var(--M); fill: color-mix(in srgb, var(--M) 16%, transparent); }
 .dgt { font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--canvas); stroke-width: 3px; }
 .dgt.N { fill: var(--N); } .dgt.V { fill: var(--V); } .dgt.M { fill: var(--M); }
+.asta-N { stroke-width: 7; stroke-linecap: round; opacity: .75; }
+.asta-N.tira { stroke: var(--N); } .asta-N.punt { stroke: var(--err); } .asta-N.zero { stroke: var(--ink2); opacity: .35; }
+.dgt.asta { stroke-width: 4px; }
+.dgt.asta.tira { fill: var(--N); } .dgt.asta.punt { fill: var(--err); }
 .def { stroke: var(--def); stroke-width: 2.2; fill: none; stroke-dasharray: 6 4; }
 .mech { stroke: var(--err); stroke-width: 2.5; fill: none; stroke-dasharray: 5 4; }
 .preview { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 6 4; }

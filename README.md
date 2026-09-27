@@ -4,7 +4,12 @@ Fem-travi è un risolutore bidimensionale basato sul metodo degli elementi finit
 
 Il progetto nasce dall'esigenza pratica di avere uno strumento di visualizzazione per la risoluzione di esercizi e prove d'esame di meccanica dei solidi. Lo strumento permette di verificare rapidamente spostamenti, reazioni vincolari e diagrammi delle sollecitazioni iperstatiche.
 
-<img width="1919" height="1031" alt="Immagine 2026-05-07 123729" src="https://github.com/user-attachments/assets/bf0dc13d-e878-44ab-968c-79804fff1779" />
+![Portale incastrato: diagramma del momento flettente](docs/img/portale-momento.png)
+
+| | |
+|---|---|
+| ![Deformata del portale](docs/img/portale-deformata.png) | ![Trave Gerber: taglio](docs/img/gerber-taglio.png) |
+| ![Capriata Pratt: tiranti e puntoni](docs/img/capriata-sforzo-normale.png) | ![Struttura labile: cinematismo](docs/img/labile-cinematismo.png) |
 
 ## Novità della versione 2
 

@@ -503,6 +503,18 @@ function diagrammi(q) {
     if (!model.elementi[k]) return;
     const g = elemGeo(model.elementi[k]);
     const nx = -g.s, ny = g.c;
+    if (model.elementi[k].tipo === 'asta') {
+      // aste: N costante, si colora l'asta (blu = tirante, rosso = puntone) invece della fascia
+      if (q !== 'N') return;
+      const N = e.N[0];
+      const cls = Math.abs(N) < 1e-6 * vmax ? 'zero' : (N > 0 ? 'tira' : 'punt');
+      s += `<path class="asta-N ${cls}" d="M${X(g.a.x)},${Y(g.a.y)}L${X(g.b.x)},${Y(g.b.y)}"/>`;
+      if (cls !== 'zero') {
+        const mx = X((g.a.x + g.b.x) / 2), my = Y((g.a.y + g.b.y) / 2);
+        labels.push([mx, my - 3, fmt(N), `asta ${cls}`]);
+      }
+      return;
+    }
     let poly = '', line = '';
     const pts = e.x.map((x, m) => {
       const bxw = g.a.x + g.c * x, byw = g.a.y + g.s * x;
@@ -539,10 +551,10 @@ function diagrammi(q) {
     });
   });
   const placed = [];
-  labels.forEach(([x, y, txt]) => {
+  labels.forEach(([x, y, txt, extra]) => {
     if (placed.some(([px, py]) => Math.abs(px - x) < 34 && Math.abs(py - y) < 13)) y += 14;
     placed.push([x, y]);
-    t += `<text class="dgt ${q}" x="${x}" y="${y + 4}" text-anchor="middle">${txt}</text>`;
+    t += `<text class="dgt ${q} ${extra || ''}" x="${x}" y="${y + 4}" text-anchor="middle">${txt}</text>`;
   });
   return s + t;
 }
@@ -931,6 +943,7 @@ function renderRisultati() {
     const an = Math.abs(s.N.max) >= Math.abs(s.N.min) ? s.N.max : s.N.min;
     h += `<tr><td><a href="#" data-selelem="${k}">${k + 1}</a></td><td>${fmt(am)}</td><td>${fmt(av)}</td><td>${fmt(an)}</td></tr>`;
   });
+  if (model.elementi.some((e) => e.tipo === 'asta')) h += '</table><p class="muted">Aste nella vista N: <b style="color:var(--N)">blu</b> = tiranti, <b style="color:var(--err)">rosso</b> = puntoni.</p><table>';
   h += '</table><p class="muted">Per ogni trave il valore con modulo massimo. N &gt; 0 trazione · M &gt; 0 tende le fibre inferiori (disegnato dal lato teso).</p>';
   h += `<details><summary class="sub" style="cursor:pointer">Spostamenti dei nodi</summary><table><tr><th>Nodo</th><th>ux [mm]</th><th>uy [mm]</th><th>φ [mrad]</th></tr>`;
   model.nodi.forEach((n, k) => { h += `<tr><td>${k + 1}</td><td>${fmt(R.U[3 * k] * 1e3)}</td><td>${fmt(R.U[3 * k + 1] * 1e3)}</td><td>${fmt(R.U[3 * k + 2] * 1e3)}</td></tr>`; });

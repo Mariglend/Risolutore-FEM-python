@@ -588,8 +588,9 @@ class Struttura:
                 mecc = np.zeros(ndof)
                 mecc[att] = Z @ V[:, 0]
                 mecc /= max(np.abs(mecc).max(), 1e-300)
+                nm = int(piccoli.sum())
                 raise StrutturaLabile(
-                    f"Struttura labile ({int(piccoli.sum())} cinematismi indipendenti): "
+                    f"Struttura labile ({nm} {'cinematismo' if nm == 1 else 'cinematismi indipendenti'}): "
                     "controlla vincoli e cerniere.",
                     meccanismo=mecc, grado_labilita=int(piccoli.sum()))
             y = V @ ((V.T @ Fz) / w)
